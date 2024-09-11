@@ -35,12 +35,43 @@ export default App
 
 
 <{main/TypeComponent.tsx}>
-import styled, {css} from 'styled-components'
 import {useCodeDisplay} from '../utils/useCodeDisplay'
 import {useRef} from 'react'
+import * as Styled from './styled'
 
-// make styles as in usual code editor
-const TextStyles = css`
+const TypeComponent = () => {
+  const {codeMap} = useCodeDisplay()
+  const filesContentList = [...codeMap.values()]
+  const randomCode = filesContentList[Math.floor(Math.random() * filesContentList.length)]
+
+  const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    
+    let newVal = e.currentTarget.value
+    console.log(e.target, e.currentTarget, e)
+    const cursorPosition = e.currentTarget?.selectionStart || 0
+    if (randomCode.slice(cursorPosition, cursorPosition + 2) === '  ') {
+      e.currentTarget.value = newVal + '  '
+      e.currentTarget.selectionStart = cursorPosition + 2
+      e.currentTarget.selectionEnd = cursorPosition + 2
+    }
+
+  }
+
+  return (
+    <Styled.Wrapper>
+      <Styled.TextWindow onInput={e=> handleInput} contentEditable />
+      <Styled.BackText>{randomCode}</Styled.BackText>
+    </Styled.Wrapper>
+  )
+}
+
+export default TypeComponent
+
+
+<{main/styled.tsx}>
+import styled, { css } from 'styled-components'
+
+export const TextStyles = css`
   font-family: 'Courier New', Courier, monospace;
   font-size: 1rem;
 
@@ -51,14 +82,14 @@ const TextStyles = css`
   word-spacing: 1px;
 `
 
-const Wrapper = styled.div`
+export const Wrapper = styled.div`
   width: 120ch;
   height: 500px;
 
   position: relative;
 `
 
-const TextWindow = styled.textarea`
+export const TextWindow = styled.div`
   width: inherit;
   height: 100%;
 
@@ -76,7 +107,7 @@ const TextWindow = styled.textarea`
     outline: none;
   }
 `
-const BackText = styled.pre`
+export const BackText = styled.pre`
   margin: 0;
   position: absolute;
   top: 0;
@@ -95,47 +126,6 @@ const BackText = styled.pre`
   ${TextStyles};
   color: #8d8d8d;
 `
-const TypeComponent = () => {
-  const {codeMap} = useCodeDisplay()
-  const filesContentList = [...codeMap.values()]
-  const randomCode = filesContentList[Math.floor(Math.random() * filesContentList.length)]
-
-  const mainComponentRef = useRef<HTMLTextAreaElement>(null)
-  const backgroundRef = useRef<HTMLPreElement>(null)
-
-  const handleType = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    e.preventDefault()
-    if (!backgroundRef.current || !mainComponentRef.current) return
-    const currentValue = e.target.textContent
-    const currentValueLength = currentValue.length
-
-    // check if next symbol from randomCode is tab and if yes, add tab to current value
-
-
-    const cursorPosition = mainComponentRef.current.selectionStart
-    console.log(currentValue[cursorPosition], cursorPosition)
-    if (currentValue[cursorPosition - 1] === '\'') {
-      mainComponentRef.current.value = `${currentValue.slice(0, cursorPosition - 1)}'${currentValue.slice(cursorPosition)}`
-      mainComponentRef.current.selectionStart = cursorPosition + 1
-      mainComponentRef.current.selectionEnd = cursorPosition + 1
-    }
-
-    if (currentValue[cursorPosition - 1] === '\t') {
-      mainComponentRef.current.value = `${currentValue.slice(0, cursorPosition - 1)}\t${currentValue.slice(cursorPosition)}`
-      mainComponentRef.current.selectionStart = cursorPosition + 1
-      mainComponentRef.current.selectionEnd = cursorPosition + 1
-    }    
-  }
-
-  return (
-    <Wrapper>
-      <TextWindow ref={mainComponentRef} onChange={handleType} />
-      <BackText ref={backgroundRef}>{randomCode}</BackText>
-    </Wrapper>
-  )
-}
-
-export default TypeComponent
 
 
 <{utils/generateCodeFile.js}>
