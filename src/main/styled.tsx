@@ -12,7 +12,7 @@ export const TextStyles = css`
 `
 
 export const Wrapper = styled.div`
-  width: 120ch;
+  width: fit-content;
   height: 500px;
 
   position: relative;

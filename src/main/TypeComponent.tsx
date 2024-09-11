@@ -1,6 +1,6 @@
 import {useCodeDisplay} from '../utils/useCodeDisplay'
 import * as Styled from './styled'
-import {useMemo, useState} from 'react'
+import {useEffect, useMemo, useRef, useState} from 'react'
 
 const TypeComponent = () => {
   const {codeMap} = useCodeDisplay()
@@ -8,7 +8,8 @@ const TypeComponent = () => {
   const randomCode = useMemo(() => filesContentList[Math.floor(Math.random() * filesContentList.length)], [codeMap])
 
   const [errorIndex, setErrorIndex] = useState<number | null>(null)
-
+  const contentRef = useRef<HTMLTextAreaElement>(null)
+  
   const verifyInput = (symbol: string | null, index: number) => {
     if (!!errorIndex && index === errorIndex - 1 && !symbol) {
       return setErrorIndex(null)
@@ -17,6 +18,12 @@ const TypeComponent = () => {
     if (!symbol || !!errorIndex) return
 
     if (randomCode[index] !== symbol) {
+      const selection = window.getSelection()
+      const range = selection?.getRangeAt(0)
+      console.log(range)
+      // const rect = range?.getClientRects()[0]
+      // console.log(rect)
+
       setErrorIndex(index)
     }
   }
@@ -35,7 +42,7 @@ const TypeComponent = () => {
 
   return (
     <Styled.Wrapper>
-      <Styled.TextWindow onInput={handleInput} spellCheck={false} />
+      <Styled.TextWindow ref={contentRef} onInput={handleInput} spellCheck={false} cols={120}/>
       <Styled.BackText>{randomCode}</Styled.BackText>
     </Styled.Wrapper>
   )
