@@ -1,0 +1,241 @@
+<{main.tsx}>
+import {StrictMode} from 'react'
+import {createRoot} from 'react-dom/client'
+import App from './App'
+import './index.css'
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+)
+
+
+<{App.tsx}>
+import styled from 'styled-components'
+import TypeComponent from './main/TypeComponent'
+
+const AppWrapper = styled.main`
+  background-color: #3f3f3f;
+  color: #ffffff;
+  width: 100dvw;
+  height: 100dvh;
+  overflow: hidden;
+`
+
+const App = () => {
+  return (
+    <AppWrapper>
+      <TypeComponent />
+    </AppWrapper>
+  )
+}
+
+export default App
+
+
+<{main/TypeComponent.tsx}>
+import styled, {css} from 'styled-components'
+import {useCodeDisplay} from '../utils/useCodeDisplay'
+import {useRef} from 'react'
+
+// make styles as in usual code editor
+const TextStyles = css`
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1rem;
+
+  text-align: left;
+
+  line-height: 1.5;
+  letter-spacing: 1px;
+  word-spacing: 1px;
+`
+
+const Wrapper = styled.div`
+  width: 120ch;
+  height: 500px;
+
+  position: relative;
+`
+
+const TextWindow = styled.textarea`
+  width: inherit;
+  height: 100%;
+
+  overflow: scroll;
+
+  margin: 0;
+  border: none;
+  padding: 10px;
+
+  resize: none;
+
+  ${TextStyles}
+
+  &:focus {
+    outline: none;
+  }
+`
+const BackText = styled.pre`
+  margin: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  width: inherit;
+  height: 100%;
+
+  overflow: hidden;
+
+  padding: 10px;
+  opacity: 0.5;
+
+  pointer-events: none;
+
+  ${TextStyles};
+  color: #8d8d8d;
+`
+const TypeComponent = () => {
+  const {codeMap} = useCodeDisplay()
+  const filesContentList = [...codeMap.values()]
+  const randomCode = filesContentList[Math.floor(Math.random() * filesContentList.length)]
+
+  const mainComponentRef = useRef<HTMLTextAreaElement>(null)
+  const backgroundRef = useRef<HTMLPreElement>(null)
+
+  const handleType = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    e.preventDefault()
+    if (!backgroundRef.current || !mainComponentRef.current) return
+    const currentValue = e.target.textContent
+    const currentValueLength = currentValue.length
+
+    // check if next symbol from randomCode is tab and if yes, add tab to current value
+
+
+    const cursorPosition = mainComponentRef.current.selectionStart
+    console.log(currentValue[cursorPosition], cursorPosition)
+    if (currentValue[cursorPosition - 1] === '\'') {
+      mainComponentRef.current.value = `${currentValue.slice(0, cursorPosition - 1)}'${currentValue.slice(cursorPosition)}`
+      mainComponentRef.current.selectionStart = cursorPosition + 1
+      mainComponentRef.current.selectionEnd = cursorPosition + 1
+    }
+
+    if (currentValue[cursorPosition - 1] === '\t') {
+      mainComponentRef.current.value = `${currentValue.slice(0, cursorPosition - 1)}\t${currentValue.slice(cursorPosition)}`
+      mainComponentRef.current.selectionStart = cursorPosition + 1
+      mainComponentRef.current.selectionEnd = cursorPosition + 1
+    }    
+  }
+
+  return (
+    <Wrapper>
+      <TextWindow ref={mainComponentRef} onChange={handleType} />
+      <BackText ref={backgroundRef}>{randomCode}</BackText>
+    </Wrapper>
+  )
+}
+
+export default TypeComponent
+
+
+<{utils/generateCodeFile.js}>
+const fs = require('fs')
+const path = require('path')
+
+const availableExtensions = ['ts', 'tsx', 'js', 'jsx']
+
+function collectFilesContent(dir, collectedContent = '') {
+  const items = fs.readdirSync(dir, {recursive: true})
+  items.forEach((item) => {
+    const fileExtension = path.extname(item).slice(1)
+    if (!availableExtensions.includes(fileExtension)) return
+    const fullPath = path.join(dir, item)
+    if (fullPath.split('.').length > 2) return
+    if (fs.lstatSync(fullPath).isDirectory()) {
+      collectedContent = collectFilesContent(fullPath, collectedContent)
+    } else {
+      const fileContent = fs.readFileSync(fullPath, 'utf8')
+      collectedContent += `<{${item}}>\n${fileContent}\n\n`
+    }
+  })
+
+  return collectedContent
+}
+
+const directoryPath = path.join(__dirname, '../')
+const allCode = collectFilesContent(directoryPath)
+const outputFilePath = path.join(__dirname, '../assets/code.txt')
+
+fs.writeFileSync(outputFilePath, allCode)
+
+
+<{utils/useDebounce.ts}>
+import {useState} from 'react'
+
+let timeoutId: ReturnType<typeof setTimeout> | null
+
+export const useDebounce = <T>(value: T, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+
+  if (timeoutId) {
+    clearTimeout(timeoutId)
+  }
+
+  timeoutId = setTimeout(() => {
+    setDebouncedValue(value)
+  }, delay)
+
+  return debouncedValue
+}
+
+
+<{utils/useCodeDisplay.ts}>
+import {useEffect, useState} from 'react'
+
+const separateCode = (code: string) => {
+  const codeMap = new Map<string, string>()
+
+  let currentCode = ''
+  let currentFileName = ''
+
+  code.split('\n').forEach((line) => {
+    if (line.startsWith('<{')) {
+      const fileName = line.slice(2, -2)
+      if (!!currentFileName && fileName !== currentFileName) {
+        codeMap.set(currentFileName, currentCode)
+        currentCode = ''
+        currentFileName = fileName
+      } else {
+        currentFileName = fileName
+      }
+    } else {
+      currentCode += line + '\n'
+    }
+  })
+
+  return codeMap
+}
+
+const getCodeFile = async () => {
+  const codeText = await fetch('src/assets/code.txt', {
+    headers: {
+      'Content-Type': 'file/text',
+    },
+  }).then((res) => res.text())
+
+  return codeText
+}
+
+export const useCodeDisplay = () => {
+  const [codeMap, setCodeMap] = useState<Map<string, string>>(new Map())
+
+  useEffect(() => {
+    getCodeFile().then(separateCode).then(setCodeMap)
+  }, [])
+
+  return {
+    codeMap,
+  }
+}
+
+
